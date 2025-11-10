@@ -186,11 +186,38 @@ mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/monta
 
 ### Available Workflows
 
-- `workflows/sample.dax` - Simple workflow (3 tasks)
-- `workflows/montage-test.dax` - Test workflow (27 tasks)
-- `workflows/montage-2deg-3bands.dax` - Real workflow (165 tasks)
+Xem `RUN_COMMANDS.md` để biết tất cả các câu lệnh chạy workflows.
 
-For more details, see `HOW_TO_RUN.md`.
+## Benchmarking với nhiều Workflows
+
+Project đã có sẵn **15 workflows** được tổ chức trong `workflows/benchmark/`:
+
+- **CyberShake**: 50, 100, 1000 tasks
+- **Epigenomics**: 50, 100, 1000 tasks
+- **Inspiral**: 50, 100, 1000 tasks
+- **Montage**: 50, 100, 1000 tasks
+- **Sipht**: 50, 100, 1000 tasks
+
+### Chạy batch test (Tất cả workflows)
+
+```powershell
+.\run-batch-tests.ps1
+```
+
+Hoặc chạy từng workflow:
+
+```cmd
+REM Small workflow (50 tasks)
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/CYBERSHAKE/CyberShake_50.dax --deadline=2000"
+
+REM Medium workflow (100 tasks)
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/CYBERSHAKE/CyberShake_100.dax --deadline=4000"
+
+REM Large workflow (1000 tasks)
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/CYBERSHAKE/CyberShake_1000.dax --deadline=15000"
+```
+
+Xem `RUN_COMMANDS.md` để biết tất cả các câu lệnh chạy workflows.
 
 ## Paper References
 
