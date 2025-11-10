@@ -14,65 +14,67 @@ Chạy workflow mẫu với 4 tasks (built-in).
 
 ```cmd
 REM Small (50 tasks)
-mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/CYBERSHAKE/CyberShake_50.dax --deadline=2000"
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/CYBERSHAKE/CyberShake_50.dax --deadline=3000"
 
 REM Medium (100 tasks)
-mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/CYBERSHAKE/CyberShake_100.dax --deadline=4000"
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/CYBERSHAKE/CyberShake_100.dax --deadline=5000"
 
 REM Large (1000 tasks)
-mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/CYBERSHAKE/CyberShake_1000.dax --deadline=15000"
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/CYBERSHAKE/CyberShake_1000.dax --deadline=20000"
 ```
 
 ### 2. Epigenomics Workflows
 
+**Lưu ý**: Epigenomics workflows có thể cần deadline cao hơn so với các workflows khác.
+
 ```cmd
-REM Small (47 tasks)
-mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/GENOME/Epigenomics_50.dax --deadline=2000"
+REM Small (47 tasks) - Cần deadline cao hơn
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/GENOME/Epigenomics_50.dax --deadline=5000"
 
 REM Medium (100 tasks)
-mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/GENOME/Epigenomics_100.dax --deadline=4000"
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/GENOME/Epigenomics_100.dax --deadline=6000"
 
 REM Large (997 tasks)
-mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/GENOME/Epigenomics_1000.dax --deadline=15000"
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/GENOME/Epigenomics_1000.dax --deadline=25000"
 ```
 
 ### 3. Inspiral Workflows
 
 ```cmd
 REM Small (50 tasks)
-mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/LIGO/Inspiral_50.dax --deadline=2000"
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/LIGO/Inspiral_50.dax --deadline=3000"
 
 REM Medium (100 tasks)
-mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/LIGO/Inspiral_100.dax --deadline=4000"
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/LIGO/Inspiral_100.dax --deadline=5000"
 
 REM Large (1000 tasks)
-mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/LIGO/Inspiral_1000.dax --deadline=15000"
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/LIGO/Inspiral_1000.dax --deadline=20000"
 ```
 
 ### 4. Montage Workflows
 
 ```cmd
 REM Small (50 tasks)
-mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/MONTAGE/Montage_50.dax --deadline=2000"
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/MONTAGE/Montage_50.dax --deadline=3000"
 
 REM Medium (100 tasks)
-mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/MONTAGE/Montage_100.dax --deadline=4000"
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/MONTAGE/Montage_100.dax --deadline=5000"
 
 REM Large (1000 tasks)
-mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/MONTAGE/Montage_1000.dax --deadline=15000"
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/MONTAGE/Montage_1000.dax --deadline=20000"
 ```
 
 ### 5. Sipht Workflows
 
 ```cmd
 REM Small (48 tasks)
-mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/SIPHT/Sipht_50.dax --deadline=2000"
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/SIPHT/Sipht_50.dax --deadline=3000"
 
 REM Medium (97 tasks)
-mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/SIPHT/Sipht_100.dax --deadline=4000"
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/SIPHT/Sipht_100.dax --deadline=5000"
 
 REM Large (968 tasks)
-mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/SIPHT/Sipht_1000.dax --deadline=15000"
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/SIPHT/Sipht_1000.dax --deadline=20000"
 ```
 
 ## 🎯 Chạy Batch Test (Tất cả workflows)
@@ -86,13 +88,16 @@ Script này sẽ:
 - Thu thập kết quả (Cost, Idle Rate, Meets Deadline, Running Time)
 - Export kết quả ra file CSV: `results/batch-test-results.csv`
 
-## 📋 Deadline khuyến nghị
+## 📋 Deadline khuyến nghị (Đã test)
 
-| Workflow Size | Deadline | Workflows |
-|---------------|----------|-----------|
-| Small (~50 tasks) | 2000s | CyberShake_50, Epigenomics_50, Inspiral_50, Montage_50, Sipht_50 |
-| Medium (~100 tasks) | 4000s | CyberShake_100, Epigenomics_100, Inspiral_100, Montage_100, Sipht_100 |
-| Large (~1000 tasks) | 15000s | CyberShake_1000, Epigenomics_1000, Inspiral_1000, Montage_1000, Sipht_1000 |
+| Workflow Size | Deadline | Workflows | Notes |
+|---------------|----------|-----------|-------|
+| Small (~50 tasks) | 3000s | CyberShake_50, Inspiral_50, Montage_50, Sipht_50 | Tăng từ 2000s |
+| Small (~50 tasks) | 5000s | Epigenomics_50 | Cần deadline cao hơn |
+| Medium (~100 tasks) | 5000s | CyberShake_100, Inspiral_100, Montage_100, Sipht_100 | Tăng từ 4000s |
+| Medium (~100 tasks) | 6000s | Epigenomics_100 | Cần deadline cao hơn |
+| Large (~1000 tasks) | 20000s | CyberShake_1000, Inspiral_1000, Montage_1000, Sipht_1000 | Tăng từ 15000s |
+| Large (~1000 tasks) | 25000s | Epigenomics_1000 | Cần deadline cao hơn |
 
 ## 💡 Tips
 

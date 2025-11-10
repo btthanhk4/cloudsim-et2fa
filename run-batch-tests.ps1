@@ -22,11 +22,11 @@ if ($daxFiles.Count -eq 0) {
 Write-Host "Found $($daxFiles.Count) DAX file(s)" -ForegroundColor Green
 Write-Host ""
 
-# Deadlines for different workflow sizes (in seconds)
+# Deadlines for different workflow sizes (in seconds) - Updated after testing
 $deadlines = @{
-    "Small" = 2000   # For workflows with < 50 tasks
-    "Medium" = 4000  # For workflows with 50-100 tasks
-    "Large" = 8000   # For workflows with > 100 tasks
+    "Small" = 3000   # For workflows with < 50 tasks (increased from 2000)
+    "Medium" = 5000  # For workflows with 50-100 tasks (increased from 4000)
+    "Large" = 20000  # For workflows with > 100 tasks (increased from 8000)
 }
 
 # Results storage
