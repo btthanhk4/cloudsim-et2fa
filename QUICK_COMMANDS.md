@@ -1,6 +1,11 @@
 # Các câu lệnh chạy Workflows - Tóm tắt nhanh
 
-## 🚀 Chạy nhanh
+##  Chạy nhanh
+
+### 0. Clean
+```cmd
+mvn clean compile -q
+```
 
 ### 1. Workflow mẫu (4 tasks)
 ```cmd
@@ -17,7 +22,7 @@ run-all-workflows.bat
 .\run-batch-tests.ps1
 ```
 
-## 📊 Chạy từng Workflow
+##  Chạy từng Workflow
 
 ### CyberShake
 ```cmd
@@ -56,13 +61,13 @@ mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/bench
 
 ## ✅ Đã test thành công
 
-- ✅ CyberShake_50, CyberShake_100
-- ✅ Montage_50, Montage_100
-- ✅ Inspiral_50
-- ✅ Sipht_50 (với deadline 3000s)
+-  CyberShake_50, CyberShake_100
+-  Montage_50, Montage_100
+-  Inspiral_50
+-  Sipht_50 (với deadline 3000s)
 - ⚠️ Epigenomics_50 (cần deadline 5000s+)
 
-## 📋 Deadline khuyến nghị
+##  Deadline khuyến nghị
 
 | Workflow | Size | Deadline |
 |----------|------|----------|
@@ -82,11 +87,9 @@ mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/bench
 | Sipht | 100 | 5000s |
 | Sipht | 1000 | 20000s |
 
-## 💡 Lưu ý
+##  Lưu ý
 
 - **Epigenomics workflows** cần deadline cao hơn so với các workflows khác
 - **Workflows lớn (1000 tasks)** có thể mất vài phút để chạy
 - **Batch test** nên chạy vào thời gian rảnh
-
-Xem `RUN_COMMANDS.md` để biết chi tiết đầy đủ.
 

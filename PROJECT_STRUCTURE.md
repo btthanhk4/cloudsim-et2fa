@@ -1,11 +1,11 @@
 # Cấu trúc Project ET2FA
 
-## 📁 Cấu trúc thư mục
+##  Cấu trúc thư mục
 
 ```
 cloudsim-et2fa/
 ├── README.md                    # Documentation chính
-├── RUN_COMMANDS.md              # Các câu lệnh chạy workflows
+├── QUICK_COMMANDS.md            # Các câu lệnh chạy workflows
 ├── pom.xml                      # Maven configuration
 ├── run.bat                      # Script chạy workflow mẫu
 ├── run-all-workflows.bat        # Script chạy tất cả workflows
@@ -37,7 +37,7 @@ cloudsim-et2fa/
         └── SIPHT/               # 3 workflows (50, 100, 1000 tasks)
 ```
 
-## 📋 Files quan trọng
+##  Files quan trọng
 
 ### Source Code
 - `src/main/java/vn/et2fa/algorithm/` - 3 phases của ET2FA
@@ -58,7 +58,7 @@ cloudsim-et2fa/
 ### Workflows
 - `workflows/benchmark/` - 15 workflows được tổ chức theo 5 loại
 
-## 🚀 Cách sử dụng
+##  Cách sử dụng
 
 ### Chạy workflow mẫu
 ```cmd
@@ -73,7 +73,7 @@ Xem `RUN_COMMANDS.md` để biết tất cả các câu lệnh.
 .\run-batch-tests.ps1
 ```
 
-## ✅ Tổng kết
+##  Tổng kết
 
 - **Source Code**: Đầy đủ các file Java
 - **Scripts**: 3 scripts để chạy workflows
