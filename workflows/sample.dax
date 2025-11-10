@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<adag xmlns="http://pegasus.isi.edu/schema/DAX" version="3.6" name="sample">
+  <job id="ID0001" name="preprocess" runtime="12">
+    <uses name="a.txt" link="output" size="10485760"/>
+  </job>
+  <job id="ID0002" name="analyze" runtime="20">
+    <uses name="b.txt" link="output" size="5242880"/>
+  </job>
+  <job id="ID0003" name="merge" runtime="15">
+    <uses name="c.txt" link="output" size="2097152"/>
+  </job>
+
+  <child ref="ID0003">
+    <parent ref="ID0001"/>
+    <parent ref="ID0002"/>
+  </child>
+</adag>
+
+
+

@@ -53,7 +53,8 @@ cloudsim-et2fa/
 │   ├── broker/
 │   │   └── Et2faBroker.java        # Main broker implementing ET2FA
 │   ├── util/
-│   │   └── WorkflowDAG.java        # DAG representation and utilities
+│   │   ├── WorkflowDAG.java        # DAG representation and utilities
+│   │   └── DaxLoader.java          # PEGASUS DAX XML loader
 │   └── App.java                     # Example application
 └── pom.xml                          # Maven configuration
 ```
@@ -99,6 +100,46 @@ double idleRate = broker.calculateTotalIdleRate();
 boolean meetsDeadline = broker.meetsDeadline();
 ```
 
+## Running with DAX (Pegasus Workflows)
+
+App supports loading Pegasus DAX XML directly:
+
+```bash
+# Example
+mvn clean compile exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=/path/to/workflow.dax --deadline=1500"
+```
+
+- `--dax`: path to a Pegasus DAX file (e.g., CyberShake, Epigenomics, Inspiral, Montage, Sipht)
+- `--deadline`: deadline in seconds (optional, default 1000)
+
+Notes:
+- The loader reads `<job>` elements (uses `runtime` as computation if available)
+- Dependencies are read from `<child><parent/></child>` elements
+- Data transfers are approximated from output file sizes
+
+## Generating Montage DAX Files (Windows)
+
+### Quick Start
+
+1. **Generate DAX file** (only needs Python 3, no Pegasus WMS required):
+   ```cmd
+   python generate-montage-dax-simple.py --center "56.7 24.0" --degrees 1.0 --bands 1 --output workflows/montage-test.dax
+   ```
+
+2. **Run with ET2FA**:
+   ```cmd
+   mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/montage-test.dax --deadline=3000"
+   ```
+
+### Windows Setup
+
+**Requirements**: 
+- Python 3.6+ (for generating DAX files, no Pegasus WMS needed!)
+- Java 17+
+- Maven 3.6+
+
+See `HOW_TO_RUN.md` for detailed running instructions.
+
 ## Key Features
 
 - **Workflow DAG Support**: Handles complex workflow structures with dependencies
@@ -124,9 +165,32 @@ mvn package
 
 ## Running
 
-```bash
-mvn exec:java -Dexec.mainClass="vn.et2fa.App"
+### Quick Start (Windows)
+
+```cmd
+run.bat
 ```
+
+### Run with Maven
+
+```bash
+# Sample workflow (4 tasks)
+mvn exec:java -Dexec.mainClass="vn.et2fa.App"
+
+# With DAX file
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/montage-test.dax --deadline=3000"
+
+# With large workflow
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/montage-2deg-3bands.dax --deadline=5000"
+```
+
+### Available Workflows
+
+- `workflows/sample.dax` - Simple workflow (3 tasks)
+- `workflows/montage-test.dax` - Test workflow (27 tasks)
+- `workflows/montage-2deg-3bands.dax` - Real workflow (165 tasks)
+
+For more details, see `HOW_TO_RUN.md`.
 
 ## Paper References
 
