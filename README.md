@@ -180,8 +180,8 @@ mvn exec:java -Dexec.mainClass="vn.et2fa.App"
 # With DAX file
 mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/montage-test.dax --deadline=3000"
 
-# With large workflow
-mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/montage-2deg-3bands.dax --deadline=5000"
+# With large workflow (500 tasks)
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/MONTAGE/Montage_500.dax --deadline=10000"
 ```
 
 ### Available Workflows
@@ -192,11 +192,13 @@ Xem `RUN_COMMANDS.md` để biết tất cả các câu lệnh chạy workflows.
 
 Project đã có sẵn **15 workflows** được tổ chức trong `workflows/benchmark/`:
 
-- **CyberShake**: 50, 100, 1000 tasks
-- **Epigenomics**: 50, 100, 1000 tasks
-- **Inspiral**: 50, 100, 1000 tasks
-- **Montage**: 50, 100, 1000 tasks
-- **Sipht**: 50, 100, 1000 tasks
+- **CyberShake**: 50, 100, 500 tasks
+- **Epigenomics**: 50, 100, 500 tasks
+- **Inspiral**: 50, 100, 500 tasks
+- **Montage**: 50, 100, 500 tasks
+- **Sipht**: 50, 100, 500 tasks
+
+**Lưu ý**: Đã thay thế workflows 1000 tasks bằng 500 tasks để chạy nhanh hơn.
 
 ### Chạy batch test (Tất cả workflows)
 
@@ -208,13 +210,13 @@ Hoặc chạy từng workflow:
 
 ```cmd
 REM Small workflow (50 tasks)
-mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/CYBERSHAKE/CyberShake_50.dax --deadline=2000"
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/CYBERSHAKE/CyberShake_50.dax --deadline=3000"
 
 REM Medium workflow (100 tasks)
-mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/CYBERSHAKE/CyberShake_100.dax --deadline=4000"
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/CYBERSHAKE/CyberShake_100.dax --deadline=5000"
 
-REM Large workflow (1000 tasks)
-mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/CYBERSHAKE/CyberShake_1000.dax --deadline=15000"
+REM Large workflow (500 tasks)
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/CYBERSHAKE/CyberShake_500.dax --deadline=10000"
 ```
 
 Xem `RUN_COMMANDS.md` để biết tất cả các câu lệnh chạy workflows.

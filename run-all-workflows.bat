@@ -67,6 +67,30 @@ echo Sipht_100...
 call mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/SIPHT/Sipht_100.dax --deadline=5000" -q
 echo.
 
+REM Large workflows (500 tasks) - Replaced 1000 tasks for faster execution
+echo === Large Workflows (500 tasks) ===
+echo.
+
+echo CyberShake_500...
+call mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/CYBERSHAKE/CyberShake_500.dax --deadline=10000" -q
+echo.
+
+echo Epigenomics_500...
+call mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/GENOME/Epigenomics_500.dax --deadline=12000" -q
+echo.
+
+echo Inspiral_500...
+call mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/LIGO/Inspiral_500.dax --deadline=10000" -q
+echo.
+
+echo Montage_500...
+call mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/MONTAGE/Montage_500.dax --deadline=10000" -q
+echo.
+
+echo Sipht_500...
+call mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/SIPHT/Sipht_500.dax --deadline=10000" -q
+echo.
+
 echo ========================================
 echo Benchmark Complete!
 echo ========================================

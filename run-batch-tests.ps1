@@ -24,9 +24,9 @@ Write-Host ""
 
 # Deadlines for different workflow sizes (in seconds) - Updated after testing
 $deadlines = @{
-    "Small" = 3000   # For workflows with < 50 tasks (increased from 2000)
-    "Medium" = 5000  # For workflows with 50-100 tasks (increased from 4000)
-    "Large" = 20000  # For workflows with > 100 tasks (increased from 8000)
+    "Small" = 3000   # For workflows with < 50 tasks
+    "Medium" = 5000  # For workflows with 50-100 tasks
+    "Large" = 10000  # For workflows with 500 tasks (replaced 1000 tasks for faster execution)
 }
 
 # Results storage
@@ -49,8 +49,18 @@ foreach ($daxFile in $daxFiles) {
         $taskCount = [int]($workflowName -replace '.*_(\d+)\.dax', '$1')
         if ($taskCount -lt 50) {
             $deadline = $deadlines["Small"]
-        } elseif ($taskCount -gt 100) {
+        } elseif ($taskCount -ge 500) {
             $deadline = $deadlines["Large"]
+        }
+        # Special handling for Epigenomics (needs higher deadline)
+        if ($workflowName -match "Epigenomics") {
+            if ($taskCount -lt 50) {
+                $deadline = 5000
+            } elseif ($taskCount -lt 100) {
+                $deadline = 6000
+            } elseif ($taskCount -ge 500) {
+                $deadline = 12000
+            }
         }
     }
     
