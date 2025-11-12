@@ -184,11 +184,7 @@ mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/monta
 mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/MONTAGE/Montage_500.dax --deadline=10000"
 ```
 
-### Available Workflows
-
-Xem `RUN_COMMANDS.md` để biết tất cả các câu lệnh chạy workflows.
-
-## Benchmarking với nhiều Workflows
+## Available Workflows
 
 Project đã có sẵn **15 workflows** được tổ chức trong `workflows/benchmark/`:
 
@@ -198,28 +194,59 @@ Project đã có sẵn **15 workflows** được tổ chức trong `workflows/be
 - **Montage**: 50, 100, 500 tasks
 - **Sipht**: 50, 100, 500 tasks
 
-**Lưu ý**: Đã thay thế workflows 1000 tasks bằng 500 tasks để chạy nhanh hơn.
-
 ### Chạy batch test (Tất cả workflows)
 
+**Windows:**
 ```powershell
 .\run-batch-tests.ps1
 ```
 
-Hoặc chạy từng workflow:
-
-```cmd
-REM Small workflow (50 tasks)
-mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/CYBERSHAKE/CyberShake_50.dax --deadline=3000"
-
-REM Medium workflow (100 tasks)
-mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/CYBERSHAKE/CyberShake_100.dax --deadline=5000"
-
-REM Large workflow (500 tasks)
-mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/CYBERSHAKE/CyberShake_500.dax --deadline=10000"
+**Linux/Mac:**
+```bash
+./test-all-workflows.sh
 ```
 
-Xem `RUN_COMMANDS.md` để biết tất cả các câu lệnh chạy workflows.
+### Chạy từng workflow
+
+**CyberShake:**
+```bash
+# 50 tasks
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/CYBERSHAKE/CyberShake_50.dax --deadline=3000"
+
+# 100 tasks
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/CYBERSHAKE/CyberShake_100.dax --deadline=5000"
+
+# 500 tasks
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/CYBERSHAKE/CyberShake_500.dax --deadline=15000"
+```
+
+**Epigenomics:**
+```bash
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/GENOME/Epigenomics_50.dax --deadline=3000"
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/GENOME/Epigenomics_100.dax --deadline=5000"
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/GENOME/Epigenomics_500.dax --deadline=15000"
+```
+
+**Inspiral:**
+```bash
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/LIGO/Inspiral_50.dax --deadline=3000"
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/LIGO/Inspiral_100.dax --deadline=5000"
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/LIGO/Inspiral_500.dax --deadline=15000"
+```
+
+**Montage:**
+```bash
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/MONTAGE/Montage_50.dax --deadline=3000"
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/MONTAGE/Montage_100.dax --deadline=5000"
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/MONTAGE/Montage_500.dax --deadline=15000"
+```
+
+**Sipht:**
+```bash
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/SIPHT/Sipht_50.dax --deadline=3000"
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/SIPHT/Sipht_100.dax --deadline=5000"
+mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/SIPHT/Sipht_500.dax --deadline=15000"
+```
 
 ## Paper References
 
