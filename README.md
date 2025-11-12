@@ -1,192 +1,195 @@
-# ET2FA: Enhanced Task Type First Algorithm
+# ET2FA: Thuật toán Task Type First nâng cao
 
-Implementation of the ET2FA algorithm for deadline-constrained workflow scheduling in cloud computing, based on the paper:
+Triển khai thuật toán ET2FA cho bài toán lập lịch workflow có ràng buộc deadline trong điện toán đám mây, dựa trên bài báo:
 
 **"ET2FA: A Hybrid Heuristic Algorithm for Deadline-constrained Workflow Scheduling in Cloud"**
 
-Zaixing Sun, Boyu Zhang, Chonglin Gu, Ruitao Xie, Bin Qian, and Hejiao Huang  
+Zaixing Sun, Boyu Zhang, Chonglin Gu, Ruitao Xie, Bin Qian, và Hejiao Huang  
 *IEEE Transactions on Services Computing, 2022*
 
-## Overview
+## Tổng quan
 
-ET2FA is a hybrid heuristic algorithm that solves deadline-constrained workflow scheduling problems in cloud environments with the following features:
-- Per-second billing with minimum 60 seconds
-- Instance hibernation capability
-- Heterogeneous VM resources
-- Unlimited VM instances
+ET2FA là một thuật toán heuristic lai giải quyết bài toán lập lịch workflow có ràng buộc deadline trong môi trường điện toán đám mây với các tính năng sau:
 
-## Algorithm Components
+- Thanh toán theo giây với tối thiểu 60 giây
+- Khả năng ngủ đông (hibernation) instance
+- Tài nguyên VM không đồng nhất (heterogeneous)
+- Số lượng VM không giới hạn
 
-The ET2FA algorithm consists of three main phases:
+## Các thành phần của thuật toán
 
-### 1. T2FA (Task Type First Algorithm)
-- Schedules tasks based on topological level and task types
-- Classifies tasks into Type0-Type4 based on DAG structure:
-  - **Type0**: Tasks alone in their topological level
-  - **Type1**: Parent nodes in MOSI (Multiple Output Single Input) structure
-  - **Type2**: Child nodes in MOSI structure
-  - **Type3**: Parent nodes in SOMI (Single Output Multiple Input) structure
-  - **Type4**: Child nodes in SOMI structure
-- Uses compact-scheduling-condition based VM selection
+Thuật toán ET2FA bao gồm ba giai đoạn chính:
 
-### 2. DOBS (Delay Operation Based on Block Structure)
-- Optimizes scheduling by delaying block structures
-- Implements Theorem 1 from the paper
-- Reduces idle time and cost
+### 1. T2FA (Task Type First Algorithm - Thuật toán ưu tiên loại task)
 
-### 3. IHSH (Instance Hibernate Scheduling Heuristic)
-- Schedules instance hibernation during idle periods
-- Minimizes cost by utilizing hibernation mode
+- Lập lịch các task dựa trên mức độ topo và loại task
+- Phân loại task thành Type0-Type4 dựa trên cấu trúc DAG:
+  - **Type0**: Task đơn lẻ trong mức độ topo của nó
+  - **Type1**: Nút cha trong cấu trúc MOSI (Multiple Output Single Input - Nhiều đầu ra, một đầu vào)
+  - **Type2**: Nút con trong cấu trúc MOSI
+  - **Type3**: Nút cha trong cấu trúc SOMI (Single Output Multiple Input - Một đầu ra, nhiều đầu vào)
+  - **Type4**: Nút con trong cấu trúc SOMI
+- Sử dụng điều kiện lập lịch compact để chọn VM
 
-## Project Structure
+### 2. DOBS (Delay Operation Based on Block Structure - Thao tác trì hoãn dựa trên cấu trúc khối)
+
+- Tối ưu hóa lập lịch bằng cách trì hoãn các cấu trúc khối
+- Triển khai Định lý 1 từ bài báo
+- Giảm thời gian nhàn rỗi và chi phí
+
+### 3. IHSH (Instance Hibernate Scheduling Heuristic - Heuristic lập lịch ngủ đông instance)
+
+- Lập lịch ngủ đông instance trong các khoảng thời gian nhàn rỗi
+- Tối thiểu hóa chi phí bằng cách sử dụng chế độ ngủ đông
+
+## Cấu trúc dự án
 
 ```
 cloudsim-et2fa/
 ├── src/main/java/vn/et2fa/
 │   ├── model/
-│   │   ├── Et2faTask.java          # Extended Cloudlet with ET2FA properties
-│   │   └── TaskType.java           # Task type enumeration
+│   │   ├── Et2faTask.java          # Cloudlet mở rộng với các thuộc tính ET2FA
+│   │   └── TaskType.java           # Enum các loại task
 │   ├── algorithm/
-│   │   ├── T2FAAlgorithm.java       # Phase 1: Task Type First Algorithm
-│   │   ├── DOBSAlgorithm.java      # Phase 2: Delay Operation Based on Block Structure
-│   │   └── IHSHAlgorithm.java      # Phase 3: Instance Hibernate Scheduling Heuristic
+│   │   ├── T2FAAlgorithm.java       # Giai đoạn 1: Task Type First Algorithm
+│   │   ├── DOBSAlgorithm.java      # Giai đoạn 2: Delay Operation Based on Block Structure
+│   │   └── IHSHAlgorithm.java      # Giai đoạn 3: Instance Hibernate Scheduling Heuristic
 │   ├── broker/
-│   │   └── Et2faBroker.java        # Main broker implementing ET2FA
+│   │   └── Et2faBroker.java        # Broker chính triển khai ET2FA
 │   ├── util/
-│   │   ├── WorkflowDAG.java        # DAG representation and utilities
-│   │   └── DaxLoader.java          # PEGASUS DAX XML loader
-│   └── App.java                     # Example application
-└── pom.xml                          # Maven configuration
+│   │   ├── WorkflowDAG.java        # Biểu diễn DAG và các tiện ích
+│   │   ├── DaxLoader.java          # Bộ tải PEGASUS DAX XML
+│   │   └── VmConfig.java           # Cấu hình VM
+│   └── App.java                     # Ứng dụng mẫu
+└── pom.xml                          # Cấu hình Maven
 ```
 
-## Usage Example
+## Ví dụ sử dụng
 
 ```java
-// 1. Create simulation and broker
+// 1. Tạo môi trường mô phỏng và broker
 CloudSim simulation = new CloudSim();
 Et2faBroker broker = new Et2faBroker(simulation);
 
-// 2. Create VMs
+// 2. Tạo các VM
 List<Vm> vmList = ...;
 broker.submitVmList(vmList);
 
-// 3. Create workflow tasks
+// 3. Tạo các task workflow
 List<Et2faTask> tasks = ...;
 broker.submitCloudletList(tasks);
 
-// 4. Build workflow DAG with dependencies
+// 4. Xây dựng DAG workflow với các phụ thuộc
 Map<String, List<String>> dependencies = new HashMap<>();
 dependencies.put("0", Arrays.asList("1", "2"));
-// ... more dependencies
+// ... thêm các phụ thuộc khác
 
 Map<String, Double> dataTransfers = new HashMap<>();
 dataTransfers.put("0_1", 100.0);
-// ... more data transfers
+// ... thêm các chuyển dữ liệu khác
 
 broker.buildWorkflowDAG(tasks, dependencies, dataTransfers);
 
-// 5. Set deadline
+// 5. Thiết lập deadline
 broker.setDeadline(1000.0);
 
-// 6. Execute ET2FA algorithm
+// 6. Thực thi thuật toán ET2FA
 broker.executeET2FA();
 
-// 7. Run simulation
+// 7. Chạy mô phỏng
 simulation.start();
 
-// 8. Get results
+// 8. Lấy kết quả
 double totalCost = broker.calculateTotalCost();
 double idleRate = broker.calculateTotalIdleRate();
 boolean meetsDeadline = broker.meetsDeadline();
 ```
 
-## Running with DAX (Pegasus Workflows)
+## Chạy với DAX (Pegasus Workflows)
 
-App supports loading Pegasus DAX XML directly:
+Ứng dụng hỗ trợ tải trực tiếp file Pegasus DAX XML:
 
 ```bash
-# Example
-mvn clean compile exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=/path/to/workflow.dax --deadline=1500"
+# Ví dụ
+mvn clean compile exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=/đường/dẫn/đến/workflow.dax --deadline=1500"
 ```
 
-- `--dax`: path to a Pegasus DAX file (e.g., CyberShake, Epigenomics, Inspiral, Montage, Sipht)
-- `--deadline`: deadline in seconds (optional, default 1000)
+- `--dax`: đường dẫn đến file Pegasus DAX (ví dụ: CyberShake, Epigenomics, Inspiral, Montage, Sipht)
+- `--deadline`: deadline tính bằng giây (tùy chọn, mặc định 1000)
 
-Notes:
-- The loader reads `<job>` elements (uses `runtime` as computation if available)
-- Dependencies are read from `<child><parent/></child>` elements
-- Data transfers are approximated from output file sizes
+**Lưu ý:**
+- Bộ tải đọc các phần tử `<job>` (sử dụng `runtime` làm computation nếu có)
+- Các phụ thuộc được đọc từ các phần tử `<child><parent/></child>`
+- Chuyển dữ liệu được ước tính từ kích thước file đầu ra
 
-## Generating Montage DAX Files (Windows)
+## Tạo file DAX Montage (Windows)
 
-### Quick Start
+### Bắt đầu nhanh
 
-1. **Generate DAX file** (only needs Python 3, no Pegasus WMS required):
+1. **Tạo file DAX** (chỉ cần Python 3, không cần Pegasus WMS):
    ```cmd
    python generate-montage-dax-simple.py --center "56.7 24.0" --degrees 1.0 --bands 1 --output workflows/montage-test.dax
    ```
 
-2. **Run with ET2FA**:
+2. **Chạy với ET2FA**:
    ```cmd
    mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/montage-test.dax --deadline=3000"
    ```
 
-### Windows Setup
+### Cài đặt Windows
 
-**Requirements**: 
-- Python 3.6+ (for generating DAX files, no Pegasus WMS needed!)
+**Yêu cầu:**
+- Python 3.6+ (để tạo file DAX, không cần Pegasus WMS!)
 - Java 17+
 - Maven 3.6+
 
-See `HOW_TO_RUN.md` for detailed running instructions.
+## Tính năng chính
 
-## Key Features
+- **Hỗ trợ Workflow DAG**: Xử lý các cấu trúc workflow phức tạp với các phụ thuộc
+- **Tính toán mức độ Topo**: Tự động tính toán mức độ của các task
+- **Phân loại loại Task**: Nhận diện các cấu trúc DAG đặc biệt (SOSI, MOSI, SOMI, MOMI)
+- **Tối ưu hóa cấu trúc khối**: Trì hoãn các task để giảm thời gian nhàn rỗi
+- **Lập lịch ngủ đông**: Tự động lập lịch ngủ đông VM
+- **Tính toán chi phí**: Tính tổng chi phí bao gồm chi phí chạy và chi phí ngủ đông
+- **Tính toán tỷ lệ nhàn rỗi**: Đo lường mức độ sử dụng tài nguyên
 
-- **Workflow DAG Support**: Handles complex workflow structures with dependencies
-- **Topological Level Calculation**: Automatically calculates task levels
-- **Task Type Classification**: Identifies special DAG structures (SOSI, MOSI, SOMI, MOMI)
-- **Block Structure Optimization**: Delays tasks to reduce idle time
-- **Hibernation Scheduling**: Automatically schedules VM hibernation
-- **Cost Calculation**: Computes total cost including running and hibernation costs
-- **Idle Rate Calculation**: Measures resource utilization
-
-## Dependencies
+## Phụ thuộc
 
 - CloudSim Plus 7.3.0
 - Java 17+
 - Maven 3.6+
 
-## Building
+## Biên dịch
 
 ```bash
 mvn clean compile
 mvn package
 ```
 
-## Running
+## Chạy chương trình
 
-### Quick Start (Windows)
+### Bắt đầu nhanh (Windows)
 
 ```cmd
 run.bat
 ```
 
-### Run with Maven
+### Chạy với Maven
 
 ```bash
-# Sample workflow (4 tasks)
+# Workflow mẫu (4 tasks)
 mvn exec:java -Dexec.mainClass="vn.et2fa.App"
 
-# With DAX file
+# Với file DAX
 mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/montage-test.dax --deadline=3000"
 
-# With large workflow (500 tasks)
+# Với workflow lớn (500 tasks)
 mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/MONTAGE/Montage_500.dax --deadline=10000"
 ```
 
-## Available Workflows
+## Các Workflow có sẵn
 
-Project đã có sẵn **15 workflows** được tổ chức trong `workflows/benchmark/`:
+Dự án đã có sẵn **15 workflows** được tổ chức trong `workflows/benchmark/`:
 
 - **CyberShake**: 50, 100, 500 tasks
 - **Epigenomics**: 50, 100, 500 tasks
@@ -204,6 +207,11 @@ Project đã có sẵn **15 workflows** được tổ chức trong `workflows/be
 **Linux/Mac:**
 ```bash
 ./test-all-workflows.sh
+```
+
+Hoặc chạy tất cả workflows bằng script Windows:
+```cmd
+run-all-workflows.bat
 ```
 
 ### Chạy từng workflow
@@ -248,20 +256,19 @@ mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/bench
 mvn exec:java -Dexec.mainClass="vn.et2fa.App" -Dexec.args="--dax=workflows/benchmark/SIPHT/Sipht_500.dax --deadline=15000"
 ```
 
-## Paper References
+## Tham khảo bài báo
 
-- **Original Paper**: IEEE Transactions on Services Computing, 2022
+- **Bài báo gốc**: IEEE Transactions on Services Computing, 2022
 - **DOI**: 10.1109/TSC.2022.3196620
-- **Conference Version**: IEEE CLOUD 2021
+- **Phiên bản hội nghị**: IEEE CLOUD 2021
 
-## Notes
+## Ghi chú
 
-- The implementation follows the algorithms described in the paper
-- Some simplifications were made for CloudSim Plus compatibility
-- VM pricing models need to be configured based on actual cloud provider pricing
-- Data transfer times are calculated based on VM bandwidth
+- Triển khai tuân theo các thuật toán được mô tả trong bài báo
+- Một số đơn giản hóa đã được thực hiện để tương thích với CloudSim Plus
+- Mô hình định giá VM cần được cấu hình dựa trên giá của nhà cung cấp đám mây thực tế
+- Thời gian chuyển dữ liệu được tính toán dựa trên băng thông VM
 
-## License
+## Giấy phép
 
-This implementation is for educational and research purposes.
-
+Triển khai này dành cho mục đích giáo dục và nghiên cứu.
