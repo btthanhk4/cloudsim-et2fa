@@ -80,7 +80,6 @@ public class App {
 		List<Et2faTask> cloudletList;
 		if (daxPath != null && !daxPath.isEmpty()) {
 			cloudletList = createTasksForDax(daxPath);
-			broker.submitCloudletList(cloudletList);
 			try {
 				DaxLoader.DaxWorkflow dax = DaxLoader.load(daxPath);
 				broker.buildWorkflowFromDax(cloudletList, dax);
@@ -90,7 +89,6 @@ public class App {
 			}
 		} else {
 			cloudletList = createSampleWorkflow();
-			broker.submitCloudletList(cloudletList);
 			// Build simple dependencies
 			Map<String, List<String>> dependencies = new HashMap<>();
 			dependencies.put("0", Arrays.asList("1", "2")); // Task 0 -> Task 1, Task 2
@@ -107,30 +105,60 @@ public class App {
 		// Step 6: Set deadline (default or from args)
 		broker.setDeadline(deadlineOpt);
 
-		// Step 7: Run simulation (let VMs be created first)
+		// Step 7: Submit cloudlets (they will be mapped when simulation starts)
+		broker.submitCloudletList(cloudletList);
+
+		// Step 8: Start simulation - this will create VMs and map cloudlets
+		// We use a custom broker that runs ET2FA when VMs are created
 		simulation.start();
 		
-		// Step 8: Execute ET2FA algorithm after VMs are created
-		if (broker.getVmCreatedList().size() > 0) {
-			broker.executeET2FA();
-		}
+		// Step 9: After simulation, ET2FA should have run (via broker's VM creation callback)
+		// The schedule is already applied through defaultVmMapper
 
-		// Step 9: Print results
+		// Step 10: Wait for cloudlets to finish (if simulation hasn't completed)
+		// The simulation will run until all cloudlets finish
+		
+		// Step 11: Print results
 		System.out.println("\n=== Scheduling Results ===");
-		List<Cloudlet> finished = broker.getCloudletFinishedList();
-		for (Cloudlet cl : finished) {
-			if (cl instanceof Et2faTask task) {
+		Map<Et2faTask, Vm> schedule = broker.getSchedule();
+		if (schedule != null && !schedule.isEmpty()) {
+			for (Map.Entry<Et2faTask, Vm> entry : schedule.entrySet()) {
+				Et2faTask task = entry.getKey();
+				Vm vm = entry.getValue();
 				System.out.printf("Task %d: VM %d, Start: %.2fs, Finish: %.2fs, Level: %d, Type: %s%n",
-						cl.getId(), cl.getVm().getId(), 
+						task.getId(), vm.getId(), 
 						task.getActualStartTime(), task.getActualFinishTime(),
 						task.getTopologicalLevel(), task.getType());
+			}
+		} else {
+			// Fallback: use finished cloudlets
+			List<Cloudlet> finished = broker.getCloudletFinishedList();
+			for (Cloudlet cl : finished) {
+				if (cl instanceof Et2faTask task) {
+					System.out.printf("Task %d: VM %d, Start: %.2fs, Finish: %.2fs, Level: %d, Type: %s%n",
+							cl.getId(), cl.getVm() != null ? cl.getVm().getId() : -1, 
+							task.getActualStartTime(), task.getActualFinishTime(),
+							task.getTopologicalLevel(), task.getType());
+				}
 			}
 		}
 		
 		System.out.println("\n=== Performance Metrics ===");
-		System.out.printf("Total Cost: $%.6f%n", broker.calculateTotalCost());
-		System.out.printf("Total Idle Rate: %.4f%n", broker.calculateTotalIdleRate());
+		double totalCost = broker.calculateTotalCost();
+		double totalIdleRate = broker.calculateTotalIdleRate();
+		System.out.printf("Total Cost: $%.6f%n", totalCost);
+		System.out.printf("Total Idle Rate: %.4f%n", totalIdleRate);
 		System.out.printf("Meets Deadline: %s%n", broker.meetsDeadline() ? "Yes" : "No");
+		
+		// Show max finish time
+		if (schedule != null && !schedule.isEmpty()) {
+			double maxFinishTime = schedule.keySet().stream()
+				.mapToDouble(Et2faTask::getActualFinishTime)
+				.max()
+				.orElse(0);
+			System.out.printf("Max Finish Time: %.2fs%n", maxFinishTime);
+			System.out.printf("Deadline: %.2fs%n", deadlineOpt);
+		}
 		
 		System.out.println("\n=== Simulation Complete ===");
 	}
@@ -142,11 +170,15 @@ public class App {
 		try {
 			DaxLoader.DaxWorkflow dax = DaxLoader.load(daxPath);
 			List<Et2faTask> tasks = new ArrayList<>();
+			int taskId = 0;
 			for (DaxLoader.TaskSpec spec : dax.tasks) {
 				// Create a Cloudlet for each DAX job; computation from DAX runtime
 				Et2faTask t = new Et2faTask(spec.computation, 1, TaskType.GENERAL);
+				t.setId(taskId); // Assign unique ID
 				tasks.add(t);
+				taskId++;
 			}
+			System.out.println("Created " + tasks.size() + " tasks with IDs 0-" + (taskId - 1));
 			return tasks;
 		} catch (Exception e) {
 			throw new RuntimeException(e);
@@ -160,10 +192,22 @@ public class App {
 		List<Et2faTask> tasks = new ArrayList<>();
 		
 		// Create tasks with different computation requirements
-		tasks.add(new Et2faTask(10000, 1, TaskType.GENERAL)); // Task 0 (entry)
-		tasks.add(new Et2faTask(8000, 1, TaskType.GENERAL));  // Task 1
-		tasks.add(new Et2faTask(12000, 1, TaskType.GENERAL)); // Task 2
-		tasks.add(new Et2faTask(15000, 1, TaskType.GENERAL)); // Task 3 (exit)
+		// Assign explicit IDs to tasks
+		Et2faTask task0 = new Et2faTask(10000, 1, TaskType.GENERAL); // Task 0 (entry)
+		task0.setId(0);
+		tasks.add(task0);
+		
+		Et2faTask task1 = new Et2faTask(8000, 1, TaskType.GENERAL);  // Task 1
+		task1.setId(1);
+		tasks.add(task1);
+		
+		Et2faTask task2 = new Et2faTask(12000, 1, TaskType.GENERAL); // Task 2
+		task2.setId(2);
+		tasks.add(task2);
+		
+		Et2faTask task3 = new Et2faTask(15000, 1, TaskType.GENERAL); // Task 3 (exit)
+		task3.setId(3);
+		tasks.add(task3);
 		
 		System.out.println("Created " + tasks.size() + " tasks");
 		for (int i = 0; i < tasks.size(); i++) {

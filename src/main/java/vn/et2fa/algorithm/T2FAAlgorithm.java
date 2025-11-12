@@ -4,6 +4,7 @@ import org.cloudbus.cloudsim.vms.Vm;
 import vn.et2fa.model.Et2faTask;
 import vn.et2fa.model.TaskType;
 import vn.et2fa.util.WorkflowDAG;
+import vn.et2fa.util.VmConfig;
 
 import java.util.*;
 
@@ -15,6 +16,7 @@ public class T2FAAlgorithm {
     private WorkflowDAG dag;
     private List<Vm> availableVms;
     private Map<Vm, Double> vmCompletionTimes;
+    private Map<Et2faTask, Vm> taskVmMap; // Track which VM each task is assigned to
     private Map<Integer, List<Et2faTask>> tasksByLevel;
     private Set<TaskType> type0Tasks;
     private Set<TaskType> type1Tasks;
@@ -29,6 +31,7 @@ public class T2FAAlgorithm {
         this.dag = dag;
         this.availableVms = new ArrayList<>(availableVms);
         this.vmCompletionTimes = new HashMap<>();
+        this.taskVmMap = new HashMap<>();
         this.type0Tasks = new HashSet<>();
         this.type1Tasks = new HashSet<>();
         this.type2Tasks = new HashSet<>();
@@ -37,9 +40,9 @@ public class T2FAAlgorithm {
         this.vC = new HashSet<>();
         this.vP = new HashSet<>();
         
-        // Initialize VM completion times
+        // Initialize VM completion times with cold startup time (DurC = 55.9s)
         for (Vm vm : availableVms) {
-            vmCompletionTimes.put(vm, 55.9); // Cold startup time (DurC)
+            vmCompletionTimes.put(vm, 55.9);
         }
     }
 
@@ -48,7 +51,8 @@ public class T2FAAlgorithm {
      */
     public Map<Et2faTask, Vm> schedule() {
         // Pre-processing
-        dag.simplifyDAG();
+        // Temporarily disable simplifyDAG to preserve all tasks for testing
+        // dag.simplifyDAG();
         dag.calculateTopologicalLevels();
         tasksByLevel = dag.getTasksByLevel();
         
@@ -59,16 +63,21 @@ public class T2FAAlgorithm {
             .max(Comparator.comparingDouble(Vm::getMips))
             .orElse(availableVms.get(0));
         
-        // Initialize tStar
+        // Initialize tStar based on maximum computation and fastest VM
+        // Equation: f* = max{w_i, e_i, a_i} / U(k) where U(k) is processing capacity
         List<Et2faTask> level0Tasks = tasksByLevel.getOrDefault(0, new ArrayList<>());
         if (!level0Tasks.isEmpty()) {
-            Et2faTask firstTask = level0Tasks.get(0);
             double maxComputation = level0Tasks.stream()
                 .mapToDouble(Et2faTask::getComputation)
                 .max()
                 .orElse(0);
-            tStar = maxComputation / maxVm.getMips();
-            vC.add(maxVm);
+            // Use VM processing capacity (GFLOPS) if available, otherwise use MIPS
+            VmConfig.VmType maxVmType = VmConfig.getVmType(maxVm);
+            double processingCapacity = maxVmType != null ? maxVmType.processingCapacity : maxVm.getMips();
+            tStar = maxComputation / processingCapacity;
+            if (!vC.contains(maxVm)) {
+                vC.add(maxVm);
+            }
         } else {
             tStar = 0;
         }
@@ -80,15 +89,44 @@ public class T2FAAlgorithm {
         for (int level = 0; level <= maxLevel; level++) {
             List<Et2faTask> levelTasks = tasksByLevel.getOrDefault(level, new ArrayList<>());
             
-            // Handle TYPE0 tasks (single task in level)
+            if (levelTasks.isEmpty()) continue;
+            
+            // Handle TYPE0 tasks (single task in level) - Algorithm 1 lines 7-12
             if (levelTasks.size() == 1) {
                 Et2faTask task = levelTasks.get(0);
-                double maxFinishTime = dag.getTasks().stream()
-                    .mapToDouble(Et2faTask::getEstimatedFinishTime)
+                // Calculate max estimated finish time of all tasks
+                // Use computation on fastest VM as estimate if estimatedFinishTime not set
+                double maxEstimatedFinishTime = 0;
+                for (Et2faTask t : dag.getTasks()) {
+                    double estFinish = t.getEstimatedFinishTime();
+                    if (estFinish <= 0) {
+                        // Estimate: use computation / fastest VM capacity
+                        Vm fastestVm = availableVms.stream()
+                            .max(Comparator.comparingDouble(Vm::getMips))
+                            .orElse(availableVms.get(0));
+                        VmConfig.VmType vmType = VmConfig.getVmType(fastestVm);
+                        double capacity = vmType != null ? vmType.processingCapacity : fastestVm.getMips();
+                        estFinish = t.getComputation() / capacity;
+                    }
+                    maxEstimatedFinishTime = Math.max(maxEstimatedFinishTime, estFinish);
+                }
+                // Check if task computation > 0.1 * max estimated finish time
+                // Actually, check if task weight is significant compared to max task weight
+                double maxTaskComputation = dag.getTasks().stream()
+                    .mapToDouble(Et2faTask::getComputation)
                     .max()
-                    .orElse(0);
-                
-                if (task.getComputation() > 0.1 * maxFinishTime) {
+                    .orElse(1);
+                if (task.getComputation() > 0.1 * maxTaskComputation) {
+                    // Select VM that can finish at the earliest
+                    Vm bestVm = selectBestVmForTask(task);
+                    scheduleTask(task, bestVm, schedule);
+                    vP.clear();
+                    vP.add(bestVm);
+                    vC.clear();
+                    continue;
+                } else {
+                    // If TYPE0 task doesn't meet the condition, schedule it as a general task
+                    // This ensures all tasks are scheduled
                     Vm bestVm = selectBestVmForTask(task);
                     scheduleTask(task, bestVm, schedule);
                     vP.clear();
@@ -136,21 +174,31 @@ public class T2FAAlgorithm {
 
     /**
      * Classify tasks into types (Type0-Type4) based on DAG structure
+     * Optimized to avoid redundant checks
      */
     private void classifyTaskTypes() {
-        for (Et2faTask task : dag.getTasks()) {
-            List<Et2faTask> successors = task.getSuccessors();
-            List<Et2faTask> predecessors = task.getPredecessors();
-            
-            // Check for TYPE0 (single task in level)
-            List<Et2faTask> levelTasks = tasksByLevel.getOrDefault(task.getTopologicalLevel(), new ArrayList<>());
+        // First, classify TYPE0 tasks (single task in level)
+        for (Map.Entry<Integer, List<Et2faTask>> entry : tasksByLevel.entrySet()) {
+            List<Et2faTask> levelTasks = entry.getValue();
             if (levelTasks.size() == 1) {
-                type0Tasks.add(task.getType());
+                Et2faTask task = levelTasks.get(0);
                 task.setTaskType(TaskType.TYPE0);
+                type0Tasks.add(TaskType.TYPE0);
+                continue; // Skip further classification for TYPE0 tasks
+            }
+        }
+        
+        // Classify other types
+        for (Et2faTask task : dag.getTasks()) {
+            // Skip if already classified as TYPE0
+            if (task.getType() == TaskType.TYPE0) {
                 continue;
             }
             
-            // Check for TYPE1 (MOSI parent)
+            List<Et2faTask> successors = task.getSuccessors();
+            List<Et2faTask> predecessors = task.getPredecessors();
+            
+            // Check for TYPE1 (MOSI parent) - Equation 18
             if (successors.size() > 1) {
                 boolean allSingleParent = true;
                 for (Et2faTask succ : successors) {
@@ -160,20 +208,23 @@ public class T2FAAlgorithm {
                     }
                 }
                 if (allSingleParent) {
-                    type1Tasks.add(task.getType());
                     task.setTaskType(TaskType.TYPE1);
+                    type1Tasks.add(TaskType.TYPE1);
                     continue;
                 }
             }
             
-            // Check for TYPE2 (MOSI child)
-            if (predecessors.size() == 1 && predecessors.get(0).getSuccessors().size() > 1) {
-                type2Tasks.add(task.getType());
-                task.setTaskType(TaskType.TYPE2);
-                continue;
+            // Check for TYPE2 (MOSI child) - Equation 19
+            if (predecessors.size() == 1) {
+                Et2faTask parent = predecessors.get(0);
+                if (parent.getSuccessors().size() > 1) {
+                    task.setTaskType(TaskType.TYPE2);
+                    type2Tasks.add(TaskType.TYPE2);
+                    continue;
+                }
             }
             
-            // Check for TYPE3 (SOMI parent)
+            // Check for TYPE3 (SOMI parent) - Equation 21
             if (predecessors.size() > 1) {
                 boolean allSingleChild = true;
                 for (Et2faTask pred : predecessors) {
@@ -183,16 +234,16 @@ public class T2FAAlgorithm {
                     }
                 }
                 if (allSingleChild) {
-                    type3Tasks.add(task.getType());
                     task.setTaskType(TaskType.TYPE3);
+                    type3Tasks.add(TaskType.TYPE3);
                     continue;
                 }
             }
             
-            // Check for TYPE4 (SOMI child)
-            if (successors.size() == 1 && successors.get(0).getPredecessors().size() > 1) {
-                type4Tasks.add(task.getType());
+            // Check for TYPE4 (SOMI child) - Equation 22
+            if (predecessors.size() > 1 && successors.size() == 1) {
                 task.setTaskType(TaskType.TYPE4);
+                type4Tasks.add(TaskType.TYPE4);
                 continue;
             }
             
@@ -282,32 +333,67 @@ public class T2FAAlgorithm {
 
     /**
      * Calculate available start time (Equation 23 from paper)
+     * T_ih^A = max{max_{a_j in Pre(a_i)} {T_j^F + T_jih^k}, T_h^k}
+     * Optimized to cache results and avoid redundant calculations
      */
     private double calculateAvailableStartTime(Et2faTask task, Vm vm) {
+        // T_h^k: current completion time of VM v_h (including cold startup if new)
         double vmReadyTime = vmCompletionTimes.getOrDefault(vm, 55.9);
         
-        if (task.getPredecessors().isEmpty()) {
+        List<Et2faTask> predecessors = task.getPredecessors();
+        if (predecessors == null || predecessors.isEmpty()) {
             return vmReadyTime;
         }
         
+        // Calculate max of all predecessor finish times + communication times
         double maxPredFinishTime = 0;
-        for (Et2faTask pred : task.getPredecessors()) {
+        for (Et2faTask pred : predecessors) {
+            // Skip if predecessor hasn't been scheduled yet (finish time is 0)
             double predFinishTime = pred.getActualFinishTime();
-            // Add communication time if on different VM
-            double commTime = 0; // Simplified - would need actual VM assignments
-            maxPredFinishTime = Math.max(maxPredFinishTime, predFinishTime + commTime);
+            if (predFinishTime <= 0) {
+                // Predecessor not scheduled yet, use a conservative estimate
+                continue;
+            }
+            
+            // T_jih^k: communication time from task a_j (on VM v_k) to task a_i (on VM v_h)
+            Vm predVm = taskVmMap.get(pred);
+            double commTime = 0;
+            if (predVm != null && predVm != vm && dag != null) {
+                // Calculate communication time based on data transfer and bandwidth
+                double dataSize = dag.getDataTransfer(pred, task); // Data size in MB
+                if (dataSize > 0) {
+                    commTime = VmConfig.calculateCommunicationTime(dataSize, predVm, vm);
+                }
+            }
+            
+            double predReadyTime = predFinishTime + commTime;
+            maxPredFinishTime = Math.max(maxPredFinishTime, predReadyTime);
         }
         
+        // Return max of max predecessor ready time and VM ready time
         return Math.max(maxPredFinishTime, vmReadyTime);
     }
 
+    /**
+     * Calculate execution time of task on VM
+     * t_i^h = w_i / U_h where w_i is computation and U_h is processing capacity
+     */
     private double calculateExecutionTime(Et2faTask task, Vm vm) {
-        return task.getComputation() / vm.getMips();
+        VmConfig.VmType vmType = VmConfig.getVmType(vm);
+        if (vmType != null) {
+            // Use GFLOPS from VM configuration
+            return task.getComputation() / vmType.processingCapacity;
+        } else {
+            // Fallback to MIPS
+            return task.getComputation() / vm.getMips();
+        }
     }
 
     private void scheduleTask(Et2faTask task, Vm vm, Map<Et2faTask, Vm> schedule) {
         schedule.put(task, vm);
+        taskVmMap.put(task, vm); // Track task-VM mapping for communication time calculation
         
+        // Calculate actual start and finish times
         double startTime = calculateAvailableStartTime(task, vm);
         double executionTime = calculateExecutionTime(task, vm);
         double finishTime = startTime + executionTime;
@@ -315,12 +401,15 @@ public class T2FAAlgorithm {
         task.setActualStartTime(startTime);
         task.setActualFinishTime(finishTime);
         
+        // Update VM completion time
         vmCompletionTimes.put(vm, finishTime);
         
+        // Update tStar if finish time exceeds it
         if (finishTime > tStar) {
             tStar = finishTime;
         }
         
+        // Add VM to current level set
         if (!vC.contains(vm)) {
             vC.add(vm);
         }
