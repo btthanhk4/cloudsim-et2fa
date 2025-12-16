@@ -249,15 +249,15 @@ public class Et2faBroker extends DatacenterBrokerSimple {
 		}
 		
 		// Phase 2: DOBS - Delay Operation Based on Block Structure
+		// DOBS is a core phase of ET2FA, always run (but with optimizations disabled in original mode)
 		// Skip DOBS for very large workflows to prevent hanging
-		// Skip if actual task count is >= 300 (which represents 629/1000/997/1034 in display)
 		if (schedule.size() >= 300) {
 			System.out.println("ET2FA: Phase 2 - DOBS skipped for large workflow (" + schedule.size() + " tasks)");
 		} else {
 			System.out.println("ET2FA: Phase 2 - DOBS...");
 			startTime = System.currentTimeMillis();
 			try {
-				DOBSAlgorithm dobs = new DOBSAlgorithm(schedule, workflowDAG);
+				DOBSAlgorithm dobs = new DOBSAlgorithm(schedule, workflowDAG, optConfig);
 				dobs.optimize();
 				long dobsTime = System.currentTimeMillis() - startTime;
 				System.out.println("ET2FA: Phase 2 completed in " + dobsTime + "ms.");
@@ -282,6 +282,8 @@ public class Et2faBroker extends DatacenterBrokerSimple {
 				System.err.println("ET2FA ERROR in Phase 2.5: " + e.getMessage());
 				e.printStackTrace();
 			}
+		} else if (!optConfig.isUseCPO()) {
+			System.out.println("ET2FA: Phase 2.5 - CPO skipped by configuration.");
 		} else {
 			System.out.println("ET2FA: Phase 2.5 - CPO skipped for large workflow (" + schedule.size() + " tasks)");
 		}

@@ -60,13 +60,13 @@ mvn exec:java -Dexec.mainClass="vn.et2fa.App" \
 ### Epigenomics_24
 ```bash
 mvn exec:java -Dexec.mainClass="vn.et2fa.App" \
-  -Dexec.args="--dax=workflows/benchmark/EPIGENOMICS/Epige_24.dax --deadline=3000 --mode=optimized"
+  -Dexec.args="--dax=workflows/benchmark/EPIGE/Epige_24.dax --deadline=3000 --mode=optimized"
 ```
 
 ### Epigenomics_46
 ```bash
 mvn exec:java -Dexec.mainClass="vn.et2fa.App" \
-  -Dexec.args="--dax=workflows/benchmark/EPIGENOMICS/Epige_46.dax --deadline=5000 --mode=optimized"
+  -Dexec.args="--dax=workflows/benchmark/EPIGE/Epige_46.dax --deadline=5000 --mode=optimized"
 ```
 
 ### Montage_25
@@ -120,7 +120,7 @@ mvn exec:java -Dexec.mainClass="vn.et2fa.App" \
 ### Epigenomics_997
 ```bash
 mvn exec:java -Dexec.mainClass="vn.et2fa.App" \
-  -Dexec.args="--dax=workflows/benchmark/EPIGENOMICS/Epige_997.dax --deadline=50000 --mode=optimized"
+  -Dexec.args="--dax=workflows/benchmark/EPIGE/Epige_997.dax --deadline=50000 --mode=optimized"
 ```
 
 ---
@@ -264,7 +264,7 @@ ls workflows/benchmark/INSPIRAL/*.dax
 
 ### List Epigenomics workflows
 ```bash
-ls workflows/benchmark/EPIGENOMICS/*.dax
+ls workflows/benchmark/EPIGE/*.dax
 ```
 
 ### List Montage workflows

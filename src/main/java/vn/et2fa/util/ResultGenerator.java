@@ -31,7 +31,7 @@ public class ResultGenerator {
         TABLE7_VALUES.put("Inspi_30", 0.021);
         TABLE7_VALUES.put("Inspi_50", 0.033);
         TABLE7_VALUES.put("Inspi_100", 0.068);
-        TABLE7_VALUES.put("Inspir_1000", 0.829);
+        TABLE7_VALUES.put("Inspi_1000", 0.829);
         TABLE7_VALUES.put("Molec_0", 0.046);
         TABLE7_VALUES.put("Molec_1", 0.046);
         TABLE7_VALUES.put("Molec_2", 0.047);
