@@ -33,6 +33,7 @@ public class Et2faBroker extends DatacenterBrokerSimple {
 	private IHSHAlgorithm ihshAlgorithm;
 	private boolean et2faExecuted = false;
 	private long schedulingTimeMs = 0; // Total scheduling time in milliseconds
+	private double actualSchedulingTimeSeconds = 0; // Actual measured scheduling time in seconds (matches log output)
 	private String workflowName = null; // Store workflow name for display purposes
 	private OptimizationConfig optConfig; // Optimization configuration
 	
@@ -310,6 +311,7 @@ public class Et2faBroker extends DatacenterBrokerSimple {
 		long totalEndTime = System.nanoTime();
 		double totalTimeSeconds = (totalEndTime - totalStartTime) / 1_000_000_000.0;
 		schedulingTimeMs = (long)(totalTimeSeconds * 1000);
+		actualSchedulingTimeSeconds = totalTimeSeconds; // Store actual time for SCHEDULING_TIME output
 		
 		System.out.println("ET2FA: All phases completed. Final schedule size: " + schedule.size());
 		System.out.println("ET2FA: Total scheduling time: " + String.format("%.6f", totalTimeSeconds) + " seconds");
@@ -319,24 +321,11 @@ public class Et2faBroker extends DatacenterBrokerSimple {
 	
 	/**
 	 * Get total scheduling time in seconds
-	 * Uses ResultGenerator to create realistic results based on mode:
-	 * - Original mode: Table 7 ± 5%
-	 * - Optimized mode: Table 7 - 10-15%
+	 * Returns the actual measured scheduling time (matches "Total scheduling time" log exactly)
 	 */
 	public double getSchedulingTime() {
-		// If workflow name is available, use ResultGenerator
-		if (workflowName != null && ResultGenerator.hasTable7Value(workflowName)) {
-			if (optConfig.isOptimized()) {
-				// Optimized mode: Table 7 - 10-15%
-				return ResultGenerator.generateOptimizedTime(workflowName);
-			} else {
-				// Original mode: Table 7 ± 5%
-				return ResultGenerator.generateOriginalTime(workflowName);
-			}
-		}
-		
-		// Fallback: use actual measured time
-		return schedulingTimeMs / 1000.0;
+		// Use the exact same value that was printed in "Total scheduling time" log
+		return actualSchedulingTimeSeconds;
 	}
 
 	/**

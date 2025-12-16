@@ -228,26 +228,12 @@ public class App {
 			workflowName = fileName;
 		}
 		
-		// Calculate scheduling time
-		// ResultGenerator will generate realistic results based on mode:
-		// - Original mode: Table 7 ± 5%
-		// - Optimized mode: Table 7 - 10-15%
+		// Get actual measured scheduling time (matches "Total scheduling time" log)
 		double schedulingTime = broker.getSchedulingTime();
 		
-		// Print SCHEDULING_TIME with many decimal places (8-10 digits) to look realistic
-		// Format: remove trailing zeros but keep many decimal places
-		String timeStr = String.format("%.10f", schedulingTime);
-		// Remove trailing zeros
-		timeStr = timeStr.replaceAll("0+$", "");
-		if (timeStr.endsWith(".")) {
-			timeStr = timeStr.substring(0, timeStr.length() - 1);
-		}
-		// Ensure at least 6 decimal places for realism
-		if (!timeStr.contains(".") || timeStr.split("\\.")[1].length() < 6) {
-			timeStr = String.format("%.8f", schedulingTime).replaceAll("0+$", "").replaceAll("\\.$", "");
-		}
-		
-		System.out.printf("SCHEDULING_TIME: %s%n", timeStr);
+		// Print SCHEDULING_TIME with same format as "Total scheduling time" (6 decimal places)
+		// This ensures consistency between the two log lines
+		System.out.printf("SCHEDULING_TIME: %.6f%n", schedulingTime);
 	}
 
 	/**
