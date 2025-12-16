@@ -5,6 +5,8 @@ import vn.et2fa.model.Et2faTask;
 import vn.et2fa.model.TaskType;
 import vn.et2fa.util.WorkflowDAG;
 import vn.et2fa.util.VmConfig;
+import vn.et2fa.util.OptimizationCache;
+import vn.et2fa.util.OptimizationConfig;
 
 import java.util.*;
 
@@ -26,8 +28,14 @@ public class T2FAAlgorithm {
     private double tStar; // Expected maximum finish time
     private Set<Vm> vC; // VMs with running tasks at current level
     private Set<Vm> vP; // VMs with running tasks at previous level
+    private OptimizationCache cache; // Cache for optimization
+    private OptimizationConfig optConfig; // Optimization configuration
     
     public T2FAAlgorithm(WorkflowDAG dag, List<Vm> availableVms) {
+        this(dag, availableVms, new OptimizationConfig("optimized"));
+    }
+    
+    public T2FAAlgorithm(WorkflowDAG dag, List<Vm> availableVms, OptimizationConfig optConfig) {
         this.dag = dag;
         this.availableVms = new ArrayList<>(availableVms);
         this.vmCompletionTimes = new HashMap<>();
@@ -39,6 +47,8 @@ public class T2FAAlgorithm {
         this.type4Tasks = new HashSet<>();
         this.vC = new HashSet<>();
         this.vP = new HashSet<>();
+        this.optConfig = optConfig;
+        this.cache = optConfig.isUseCache() ? new OptimizationCache() : null; // Initialize cache only if enabled
         
         // Initialize VM completion times with cold startup time (DurC = 55.9s)
         for (Vm vm : availableVms) {
@@ -53,15 +63,25 @@ public class T2FAAlgorithm {
         // Pre-processing
         // Temporarily disable simplifyDAG to preserve all tasks for testing
         // dag.simplifyDAG();
-        dag.calculateTopologicalLevels();
+        if (optConfig.isUseBFSTopological()) {
+            System.out.println("T2FA: Using BFS-optimized topological level calculation (O(n+m))...");
+            dag.calculateTopologicalLevels(); // BFS-optimized
+        } else {
+            System.out.println("T2FA: Using original topological level calculation (O(n²))...");
+            dag.calculateTopologicalLevelsOriginal(); // Original O(n²) method
+        }
         tasksByLevel = dag.getTasksByLevel();
         
+        System.out.println("T2FA: Classifying tasks into types (TYPE0-TYPE4, GENERAL)...");
         classifyTaskTypes();
         
-        // Find VM with highest processing capacity
-        Vm maxVm = availableVms.stream()
-            .max(Comparator.comparingDouble(Vm::getMips))
-            .orElse(availableVms.get(0));
+        if (optConfig.isUseCache()) {
+            System.out.println("T2FA: Using optimization cache for performance...");
+        }
+        
+        // OPTIMIZED: Use cached fastest VM instead of stream operation
+        Vm maxVm = (cache != null) ? cache.getFastestVm(availableVms) : 
+            availableVms.stream().max(Comparator.comparingDouble(vm -> VmConfig.getVmType(vm).processingCapacity)).orElse(availableVms.get(0));
         
         // Initialize tStar based on maximum computation and fastest VM
         // Equation: f* = max{w_i, e_i, a_i} / U(k) where U(k) is processing capacity
@@ -71,9 +91,9 @@ public class T2FAAlgorithm {
                 .mapToDouble(Et2faTask::getComputation)
                 .max()
                 .orElse(0);
-            // Use VM processing capacity (GFLOPS) if available, otherwise use MIPS
-            VmConfig.VmType maxVmType = VmConfig.getVmType(maxVm);
-            double processingCapacity = maxVmType != null ? maxVmType.processingCapacity : maxVm.getMips();
+            // OPTIMIZED: Use cached VM capacity
+            double processingCapacity = (cache != null) ? cache.getFastestVmCapacity(availableVms) :
+                VmConfig.getVmType(maxVm).processingCapacity;
             tStar = maxComputation / processingCapacity;
             if (!vC.contains(maxVm)) {
                 vC.add(maxVm);
@@ -85,11 +105,17 @@ public class T2FAAlgorithm {
         Map<Et2faTask, Vm> schedule = new HashMap<>();
         int maxLevel = tasksByLevel.keySet().stream().mapToInt(Integer::intValue).max().orElse(0);
         
+        System.out.println("T2FA: Scheduling " + dag.getTasks().size() + " tasks across " + (maxLevel + 1) + " topological levels...");
+        
         // Schedule by topological level
         for (int level = 0; level <= maxLevel; level++) {
             List<Et2faTask> levelTasks = tasksByLevel.getOrDefault(level, new ArrayList<>());
             
             if (levelTasks.isEmpty()) continue;
+            
+            if (level == 0 || level == maxLevel || level % Math.max(1, maxLevel / 3) == 0) {
+                System.out.println("T2FA: Processing level " + level + " (" + levelTasks.size() + " tasks)...");
+            }
             
             // Handle TYPE0 tasks (single task in level) - Algorithm 1 lines 7-12
             if (levelTasks.size() == 1) {
@@ -100,12 +126,10 @@ public class T2FAAlgorithm {
                 for (Et2faTask t : dag.getTasks()) {
                     double estFinish = t.getEstimatedFinishTime();
                     if (estFinish <= 0) {
+                        // OPTIMIZED: Use cached fastest VM capacity
                         // Estimate: use computation / fastest VM capacity
-                        Vm fastestVm = availableVms.stream()
-                            .max(Comparator.comparingDouble(Vm::getMips))
-                            .orElse(availableVms.get(0));
-                        VmConfig.VmType vmType = VmConfig.getVmType(fastestVm);
-                        double capacity = vmType != null ? vmType.processingCapacity : fastestVm.getMips();
+                        double capacity = (cache != null) ? cache.getFastestVmCapacity(availableVms) :
+                            VmConfig.getVmType(maxVm).processingCapacity;
                         estFinish = t.getComputation() / capacity;
                     }
                     maxEstimatedFinishTime = Math.max(maxEstimatedFinishTime, estFinish);
@@ -355,13 +379,17 @@ public class T2FAAlgorithm {
                 continue;
             }
             
+            // OPTIMIZED: Use cached communication time
             // T_jih^k: communication time from task a_j (on VM v_k) to task a_i (on VM v_h)
             Vm predVm = taskVmMap.get(pred);
             double commTime = 0;
             if (predVm != null && predVm != vm && dag != null) {
-                // Calculate communication time based on data transfer and bandwidth
-                double dataSize = dag.getDataTransfer(pred, task); // Data size in MB
-                if (dataSize > 0) {
+                if (cache != null) {
+                    // Use cache to avoid redundant calculations
+                    commTime = cache.getCommunicationTime(pred, task, predVm, vm, dag);
+                } else {
+                    // Original: calculate directly
+                    double dataSize = dag.getDataTransfer(pred, task);
                     commTime = VmConfig.calculateCommunicationTime(dataSize, predVm, vm);
                 }
             }
@@ -376,16 +404,18 @@ public class T2FAAlgorithm {
 
     /**
      * Calculate execution time of task on VM
+     * OPTIMIZED: Uses cache to avoid redundant calculations
      * t_i^h = w_i / U_h where w_i is computation and U_h is processing capacity
      */
     private double calculateExecutionTime(Et2faTask task, Vm vm) {
-        VmConfig.VmType vmType = VmConfig.getVmType(vm);
-        if (vmType != null) {
-            // Use GFLOPS from VM configuration
-            return task.getComputation() / vmType.processingCapacity;
+        if (cache != null) {
+            // Use cache to avoid redundant calculations
+            return cache.getExecutionTime(task, vm);
         } else {
-            // Fallback to MIPS
-            return task.getComputation() / vm.getMips();
+            // Original: calculate directly
+            VmConfig.VmType vmType = VmConfig.getVmType(vm);
+            double capacity = vmType != null ? vmType.processingCapacity : vm.getMips();
+            return task.getComputation() / capacity;
         }
     }
 

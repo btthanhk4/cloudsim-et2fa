@@ -57,11 +57,21 @@ public class WorkflowDAG {
 
     /**
      * Calculate topological levels for all tasks (Equation 13 in paper)
-     * Uses iterative approach: assign levels based on predecessor levels
-     * More efficient and safer than BFS for large DAGs
+     * OPTIMIZED: Uses BFS-based approach for better performance O(n+m) instead of O(n²)
+     * More efficient than iterative approach for large DAGs
      */
     public void calculateTopologicalLevels() {
+        calculateTopologicalLevelsBFS();
+    }
+    
+    /**
+     * Original O(n²) iterative approach for topological levels
+     */
+    public void calculateTopologicalLevelsOriginal() {
         Map<Et2faTask, Integer> levels = new HashMap<>();
+        boolean changed = true;
+        int maxIterations = tasks.size() * 2; // Prevent infinite loops
+        int iteration = 0;
         
         // Initialize all tasks to level -1
         for (Et2faTask task : tasks) {
@@ -69,61 +79,105 @@ public class WorkflowDAG {
             task.setTopologicalLevel(-1);
         }
         
-        // First pass: assign level 0 to tasks with no predecessors
-        int level0Count = 0;
-        for (Et2faTask task : tasks) {
-            List<Et2faTask> preds = task.getPredecessors();
-            if (preds == null || preds.isEmpty()) {
-                levels.put(task, 0);
-                task.setTopologicalLevel(0);
-                level0Count++;
-            }
-        }
-        
-        // Iterative passes: assign levels based on predecessor levels
-        // Maximum number of iterations = maximum depth of DAG (safety limit)
-        int maxIterations = tasks.size();
-        boolean changed = true;
-        int iteration = 0;
-        
+        // Iterative approach: assign level 0 to entry tasks, then propagate
         while (changed && iteration < maxIterations) {
             changed = false;
             iteration++;
             
             for (Et2faTask task : tasks) {
-                // Skip if already assigned
-                if (levels.get(task) >= 0) {
-                    continue;
-                }
+                if (levels.get(task) >= 0) continue; // Already assigned
                 
-                List<Et2faTask> preds = task.getPredecessors();
-                if (preds == null || preds.isEmpty()) {
-                    // No predecessors but not yet assigned - assign level 0
+                List<Et2faTask> predecessors = task.getPredecessors();
+                if (predecessors == null || predecessors.isEmpty()) {
+                    // Entry task
                     levels.put(task, 0);
                     task.setTopologicalLevel(0);
                     changed = true;
-                    level0Count++;
-                    continue;
-                }
-                
-                // Check if all predecessors have been assigned levels
-                boolean allPredsAssigned = true;
-                int maxPredLevel = -1;
-                for (Et2faTask pred : preds) {
-                    Integer predLevel = levels.get(pred);
-                    if (predLevel == null || predLevel < 0) {
-                        allPredsAssigned = false;
-                        break;
+                } else {
+                    // Check if all predecessors have levels assigned
+                    boolean allPredecessorsAssigned = true;
+                    int maxPredLevel = -1;
+                    for (Et2faTask pred : predecessors) {
+                        int predLevel = levels.getOrDefault(pred, -1);
+                        if (predLevel < 0) {
+                            allPredecessorsAssigned = false;
+                            break;
+                        }
+                        maxPredLevel = Math.max(maxPredLevel, predLevel);
                     }
-                    maxPredLevel = Math.max(maxPredLevel, predLevel);
+                    
+                    if (allPredecessorsAssigned) {
+                        levels.put(task, maxPredLevel + 1);
+                        task.setTopologicalLevel(maxPredLevel + 1);
+                        changed = true;
+                    }
                 }
+            }
+        }
+        
+        // Assign level 0 to any remaining unassigned tasks
+        for (Et2faTask task : tasks) {
+            if (levels.get(task) == null || levels.get(task) < 0) {
+                levels.put(task, 0);
+                task.setTopologicalLevel(0);
+            }
+        }
+        
+        int maxLevel = levels.values().stream().mapToInt(Integer::intValue).max().orElse(0);
+        System.out.println("Topological Levels (Original O(n²)): max level=" + maxLevel);
+    }
+    
+    /**
+     * BFS-optimized approach O(n+m)
+     */
+    private void calculateTopologicalLevelsBFS() {
+        Map<Et2faTask, Integer> levels = new HashMap<>();
+        Map<Et2faTask, Integer> inDegree = new HashMap<>();
+        java.util.Queue<Et2faTask> queue = new java.util.LinkedList<>();
+        
+        // Initialize all tasks
+        for (Et2faTask task : tasks) {
+            levels.put(task, -1);
+            task.setTopologicalLevel(-1);
+            inDegree.put(task, task.getPredecessors() != null ? task.getPredecessors().size() : 0);
+        }
+        
+        // Find all entry tasks (in-degree = 0) and add to queue with level 0
+        int level0Count = 0;
+        for (Et2faTask task : tasks) {
+            if (inDegree.get(task) == 0) {
+                levels.put(task, 0);
+                task.setTopologicalLevel(0);
+                queue.offer(task);
+                level0Count++;
+            }
+        }
+        
+        // BFS: Process tasks level by level
+        while (!queue.isEmpty()) {
+            Et2faTask current = queue.poll();
+            int currentLevel = levels.get(current);
+            
+            // Process all successors
+            List<Et2faTask> successors = getSuccessors(current);
+            for (Et2faTask succ : successors) {
+                // Decrease in-degree
+                int newInDegree = inDegree.get(succ) - 1;
+                inDegree.put(succ, newInDegree);
                 
-                // If all predecessors are assigned, assign level = max(pred levels) + 1
-                if (allPredsAssigned && maxPredLevel >= 0) {
-                    int newLevel = maxPredLevel + 1;
-                    levels.put(task, newLevel);
-                    task.setTopologicalLevel(newLevel);
-                    changed = true;
+                // If all predecessors processed, assign level and add to queue
+                if (newInDegree == 0 && levels.get(succ) < 0) {
+                    int newLevel = currentLevel + 1;
+                    levels.put(succ, newLevel);
+                    succ.setTopologicalLevel(newLevel);
+                    queue.offer(succ);
+                } else if (levels.get(succ) < 0) {
+                    // Update level if not set yet (for parallel paths)
+                    int newLevel = Math.max(levels.getOrDefault(succ, -1), currentLevel + 1);
+                    if (newLevel > levels.getOrDefault(succ, -1)) {
+                        levels.put(succ, newLevel);
+                        succ.setTopologicalLevel(newLevel);
+                    }
                 }
             }
         }
@@ -140,7 +194,7 @@ public class WorkflowDAG {
         
         // Calculate max level
         int maxLevel = levels.values().stream().mapToInt(Integer::intValue).max().orElse(0);
-        System.out.println("Topological Levels: " + level0Count + " entry tasks, max level=" + maxLevel + 
+        System.out.println("Topological Levels (BFS-optimized): " + level0Count + " entry tasks, max level=" + maxLevel + 
                           (unassignedCount > 0 ? ", " + unassignedCount + " unassigned tasks set to level 0" : ""));
     }
 
@@ -164,6 +218,12 @@ public class WorkflowDAG {
      */
     public void simplifyDAG() {
         int initialSize = tasks.size();
+        
+        // For large workflows (1000+ tasks), skip simplifyDAG to prevent hanging
+        if (initialSize >= 500) {
+            System.out.println("DAG: Skipping simplifyDAG for large workflow (" + initialSize + " tasks)");
+            return;
+        }
         
         // Limit merging: don't merge more than 30% of tasks to preserve workflow structure
         int maxMerges = Math.max(1, (int)(initialSize * 0.3));

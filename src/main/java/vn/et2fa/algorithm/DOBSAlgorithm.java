@@ -4,6 +4,7 @@ import org.cloudbus.cloudsim.vms.Vm;
 import vn.et2fa.model.Et2faTask;
 import vn.et2fa.util.WorkflowDAG;
 import vn.et2fa.util.VmConfig;
+import vn.et2fa.util.OptimizationConfig;
 
 import java.util.*;
 
@@ -18,14 +19,20 @@ public class DOBSAlgorithm {
     private Map<Et2faTask, Vm> schedule;
     private Map<Vm, List<Et2faTask>> tasksByVm;
     private WorkflowDAG dag;
+    private OptimizationConfig optConfig;
     
     public DOBSAlgorithm(Map<Et2faTask, Vm> schedule) {
-        this(schedule, null);
+        this(schedule, null, new OptimizationConfig("optimized"));
     }
     
     public DOBSAlgorithm(Map<Et2faTask, Vm> schedule, WorkflowDAG dag) {
+        this(schedule, dag, new OptimizationConfig("optimized"));
+    }
+    
+    public DOBSAlgorithm(Map<Et2faTask, Vm> schedule, WorkflowDAG dag, OptimizationConfig optConfig) {
         this.schedule = schedule;
         this.dag = dag;
+        this.optConfig = optConfig;
         this.tasksByVm = new HashMap<>();
         
         // Group tasks by VM
@@ -46,26 +53,73 @@ public class DOBSAlgorithm {
      */
     public void optimize() {
         boolean changed = true;
-        // Reduced max iterations to prevent long execution times
-        // For 50 tasks, 100 iterations should be sufficient
-        int maxIterations = Math.min(100, tasksByVm.size() * 20);
+        // Optimized max iterations based on task count to prevent long execution times
+        // For large workflows (1000+ tasks), limit iterations more aggressively
+        int totalTasks = schedule.size();
+        int maxIterations;
+        if (totalTasks < 100) {
+            maxIterations = 100;
+        } else if (totalTasks < 500) {
+            maxIterations = 30;
+        } else {
+            maxIterations = 10; // For 1000+ tasks, limit to 10 iterations to prevent hanging
+        }
         int iteration = 0;
         int totalDelays = 0;
+        
+        System.out.println("DOBS: Starting optimization with max " + maxIterations + " iterations for " + totalTasks + " tasks");
+        System.out.println("DOBS: Analyzing schedule for block structures...");
+        
+        // OPTIMIZED: Early termination - if no delays found in consecutive iterations, stop early
+        int consecutiveNoChangeIterations = 0;
+        final int MAX_CONSECUTIVE_NO_CHANGE = optConfig.isUseEarlyTermination() ? 3 : Integer.MAX_VALUE; // Stop if no changes for 3 consecutive iterations
         
         while (changed && iteration < maxIterations) {
             changed = false;
             iteration++;
+            boolean foundDelayThisIteration = false;
+            
+            if (iteration == 1) {
+                System.out.println("DOBS: Iteration " + iteration + " - Scanning for delayable blocks...");
+            }
             
             // Create a copy of VM set to avoid concurrent modification
             List<Vm> vmList = new ArrayList<>(tasksByVm.keySet());
             
-            for (Vm vm : vmList) {
+            // OPTIMIZED: For large workflows, limit number of VMs processed per iteration
+            int maxVmsToProcess = (optConfig.isUseOptimizedDOBS() && totalTasks >= 1000) ? 3 : vmList.size();
+            
+            for (int vmIdx = 0; vmIdx < Math.min(maxVmsToProcess, vmList.size()); vmIdx++) {
+                Vm vm = vmList.get(vmIdx);
                 List<Et2faTask> tasks = tasksByVm.get(vm);
                 if (tasks.isEmpty()) continue;
                 
+                // For large workflows, limit block structure search
+                if (optConfig.isUseOptimizedDOBS() && tasks.size() > 200) {
+                    // Only process first 100 tasks on this VM
+                    tasks = new ArrayList<>(tasks.subList(0, Math.min(100, tasks.size())));
+                }
+                
                 // Find first block structure
+                if (iteration == 1 && vmIdx == 0) {
+                    System.out.println("DOBS: Examining VM " + vm.getId() + " for block structures...");
+                }
                 List<Et2faTask> block = findFirstBlockStructure(vm);
-                if (block == null || block.isEmpty()) continue;
+                if (block == null || block.isEmpty()) {
+                    if (iteration == 1 && vmIdx == 0) {
+                        System.out.println("DOBS: No block structures found on VM " + vm.getId());
+                    }
+                    continue;
+                }
+                
+                if (iteration == 1 && vmIdx == 0) {
+                    System.out.println("DOBS: Found block structure with " + block.size() + " tasks on VM " + vm.getId());
+                }
+                
+                // Limit block size for large workflows
+                if (optConfig.isUseOptimizedDOBS() && block.size() > 50) {
+                    block = block.subList(0, Math.min(50, block.size())); // Only process first 50 tasks in block
+                }
                 
                 // Calculate estimated latest finish times
                 Map<Et2faTask, Double> estimatedLatestFinishTimes = 
@@ -104,8 +158,19 @@ public class DOBSAlgorithm {
                         updateSubsequentTasks(vm, block);
                         changed = true;
                         totalDelays++;
+                        foundDelayThisIteration = true;
+                        consecutiveNoChangeIterations = 0; // Reset counter
                         break; // Only process one block per iteration to avoid complexity
                     }
+                }
+            }
+            
+            // OPTIMIZED: Early termination check
+            if (!foundDelayThisIteration) {
+                consecutiveNoChangeIterations++;
+                if (consecutiveNoChangeIterations >= MAX_CONSECUTIVE_NO_CHANGE) {
+                    System.out.println("DOBS: Early termination - no delays found in " + MAX_CONSECUTIVE_NO_CHANGE + " consecutive iterations");
+                    break;
                 }
             }
             
@@ -158,6 +223,9 @@ public class DOBSAlgorithm {
         Map<Et2faTask, Double> estimatedTimes = new HashMap<>();
         Set<Et2faTask> blockSet = new HashSet<>(block);
         
+        // Limit number of successors checked for large blocks
+        int maxSuccessorsToCheck = block.size() > 20 ? 10 : Integer.MAX_VALUE;
+        
         for (Et2faTask task : block) {
             List<Et2faTask> successors = task.getSuccessors();
             
@@ -168,11 +236,19 @@ public class DOBSAlgorithm {
             }
             
             double minStartTime = Double.MAX_VALUE;
+            int checkedCount = 0;
             for (Et2faTask succ : successors) {
+                // Limit successors checked for performance
+                if (checkedCount >= maxSuccessorsToCheck) {
+                    break;
+                }
+                
                 // Skip successors in the same block (Suc(x) ∩ X)
                 if (blockSet.contains(succ)) {
                     continue;
                 }
+                
+                checkedCount++;
                 
                 // Calculate communication time C_{x,y}^T
                 Vm taskVm = schedule.get(task);
