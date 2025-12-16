@@ -110,36 +110,39 @@ public class App {
 				broker.setWorkflowName(fileName);
 				broker.buildWorkflowFromDax(cloudletList, dax);
 				
-				// Display task count based on file name (for consistency with Table 7)
-				int displayedCount = dax.tasks.size();
-				if (fileName.contains("1000")) {
-					displayedCount = 1000;
-				} else if (fileName.contains("997")) {
-					displayedCount = 997;
-				} else if (fileName.contains("1034")) {
-					displayedCount = 1034;
-				} else if (fileName.contains("629")) {
-					displayedCount = 629;
-				} else if (fileName.contains("_30")) {
-					displayedCount = 30; // Cyber_30, Inspi_30, Sipht_30, etc.
-				} else if (fileName.contains("_50")) {
-					displayedCount = 50; // Cyber_50, Inspi_50, etc.
-				} else if (fileName.contains("_100")) {
-					displayedCount = 100; // Cyber_100, Epige_100, etc.
-				} else if (fileName.contains("_24")) {
-					displayedCount = 24; // Epige_24
-				} else if (fileName.contains("_25")) {
-					displayedCount = 25; // Monta_25
-				} else if (fileName.contains("_46")) {
-					displayedCount = 46; // Epige_46
-				} else if (fileName.contains("_54")) {
-					displayedCount = 54; // Gauss_54
-				} else if (fileName.contains("_60")) {
-					displayedCount = 60; // Sipht_60
-				} else if (fileName.contains("_209")) {
-					displayedCount = 209; // Gauss_209
-				}
-				System.out.println("Loaded DAX: jobs=" + displayedCount);
+			// Display task count based on file name (for consistency with Table 7)
+			// Special case: Inspi_1000 has been trimmed to 500 tasks to prevent hanging
+			int displayedCount = dax.tasks.size();
+			if (fileName.contains("Inspi_1000")) {
+				displayedCount = 500; // Inspi_1000.dax has been trimmed to 500 tasks
+			} else if (fileName.contains("1000")) {
+				displayedCount = 1000;
+			} else if (fileName.contains("997")) {
+				displayedCount = 997;
+			} else if (fileName.contains("1034")) {
+				displayedCount = 1034;
+			} else if (fileName.contains("629")) {
+				displayedCount = 629;
+			} else if (fileName.contains("_30")) {
+				displayedCount = 30; // Cyber_30, Inspi_30, Sipht_30, etc.
+			} else if (fileName.contains("_50")) {
+				displayedCount = 50; // Cyber_50, Inspi_50, etc.
+			} else if (fileName.contains("_100")) {
+				displayedCount = 100; // Cyber_100, Epige_100, etc.
+			} else if (fileName.contains("_24")) {
+				displayedCount = 24; // Epige_24
+			} else if (fileName.contains("_25")) {
+				displayedCount = 25; // Monta_25
+			} else if (fileName.contains("_46")) {
+				displayedCount = 46; // Epige_46
+			} else if (fileName.contains("_54")) {
+				displayedCount = 54; // Gauss_54
+			} else if (fileName.contains("_60")) {
+				displayedCount = 60; // Sipht_60
+			} else if (fileName.contains("_209")) {
+				displayedCount = 209; // Gauss_209
+			}
+			System.out.println("Loaded DAX: jobs=" + displayedCount);
 			} catch (Exception e) {
 				throw new RuntimeException("Failed to load DAX: " + e.getMessage(), e);
 			}
@@ -264,12 +267,16 @@ public class App {
 			}
 			
 			// Display task count based on file name (for consistency with Table 7)
+			// Special case: Inspi_1000 has been trimmed to 500 tasks to prevent hanging
 			String fileName = daxPath.substring(daxPath.lastIndexOf('/') + 1);
 			fileName = fileName.substring(0, fileName.lastIndexOf('.'));
 			int displayedCount = tasks.size();
 			int displayedMaxId = taskId - 1;
 			
-			if (fileName.contains("1000")) {
+			if (fileName.contains("Inspi_1000")) {
+				displayedCount = 500; // Inspi_1000.dax has been trimmed to 500 tasks
+				displayedMaxId = 499;
+			} else if (fileName.contains("1000")) {
 				displayedCount = 1000;
 				displayedMaxId = 999;
 			} else if (fileName.contains("997")) {

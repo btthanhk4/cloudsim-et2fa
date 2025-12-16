@@ -40,14 +40,19 @@ public class DaxLoader {
 
 	public static DaxWorkflow load(String daxFilePath) throws Exception {
 		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-		factory.setNamespaceAware(false);
+		factory.setNamespaceAware(true); // Enable namespace support for ns0:job tags
 		factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
 		DocumentBuilder builder = factory.newDocumentBuilder();
 		Document doc = builder.parse(new File(daxFilePath));
 		doc.getDocumentElement().normalize();
 
 		// 1) Parse jobs → tasks
+		// Try both "job" (no namespace) and "ns0:job" (with namespace)
 		NodeList jobNodes = doc.getElementsByTagName("job");
+		if (jobNodes.getLength() == 0) {
+			// If no jobs found, try with namespace
+			jobNodes = doc.getElementsByTagNameNS("http://pegasus.isi.edu/schema/DAX", "job");
+		}
 		List<TaskSpec> taskSpecs = new ArrayList<>();
 		Map<String, Map<String, Long>> jobOutputSizes = new HashMap<>(); // jobId -> (filename -> size)
 		Set<String> jobIds = new HashSet<>();
@@ -84,6 +89,10 @@ public class DaxLoader {
 
 			// collect output file sizes (if any)
 			NodeList uses = job.getElementsByTagName("uses");
+			if (uses.getLength() == 0) {
+				// Try with namespace
+				uses = job.getElementsByTagNameNS("http://pegasus.isi.edu/schema/DAX", "uses");
+			}
 			Map<String, Long> outputs = new HashMap<>();
 			for (int u = 0; u < uses.getLength(); u++) {
 				Element use = (Element) uses.item(u);
@@ -102,11 +111,19 @@ public class DaxLoader {
 		// 2) Parse dependencies (only for loaded jobs)
 		Map<String, List<String>> deps = new HashMap<>();
 		NodeList childNodes = doc.getElementsByTagName("child");
+		if (childNodes.getLength() == 0) {
+			// Try with namespace
+			childNodes = doc.getElementsByTagNameNS("http://pegasus.isi.edu/schema/DAX", "child");
+		}
 		for (int i = 0; i < childNodes.getLength(); i++) {
 			Element child = (Element) childNodes.item(i);
 			String childId = child.getAttribute("ref");
 			if (!jobIds.contains(childId)) continue; // Skip if child not loaded
 			NodeList parents = child.getElementsByTagName("parent");
+			if (parents.getLength() == 0) {
+				// Try with namespace
+				parents = child.getElementsByTagNameNS("http://pegasus.isi.edu/schema/DAX", "parent");
+			}
 			for (int p = 0; p < parents.getLength(); p++) {
 				Element parent = (Element) parents.item(p);
 				String parentId = parent.getAttribute("ref");
